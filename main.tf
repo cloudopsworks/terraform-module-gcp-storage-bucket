@@ -23,7 +23,7 @@ resource "random_string" "random" {
 module "this" {
   source                   = "terraform-google-modules/cloud-storage/google"
   version                  = "~> 12.0"
-  names                    = [local.bucket_name]
+  prefix                   = local.clean_name
   project_id               = try(var.bucket_config.project_id, data.google_project.current.project_id)
   bucket_lifecycle_rules   = length(try(var.bucket_config.lifecycle_rule, [])) > 0 ? { "${local.bucket_name}" = var.bucket_config.lifecycle_rule } : {}
   admins                   = try(var.bucket_config.admins, [])
