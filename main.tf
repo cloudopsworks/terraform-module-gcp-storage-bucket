@@ -25,7 +25,7 @@ module "this" {
   version                  = "~> 12.0"
   names                    = [local.bucket_name]
   project_id               = try(var.bucket_config.project_id, data.google_project.current.project_id)
-  bucket_lifecycle_rules   = length(try(var.bucket_config.lifecycle_rule, [])) > 0 ? { local.bucket_name = var.bucket_config.lifecycle_rule } : {}
+  bucket_lifecycle_rules   = length(try(var.bucket_config.lifecycle_rule, [])) > 0 ? { "${local.bucket_name}" = var.bucket_config.lifecycle_rule } : {}
   admins                   = try(var.bucket_config.admins, [])
   viewers                  = try(var.bucket_config.bucket_viewers, [])
   location                 = try(var.bucket_config.location, "US")
@@ -33,5 +33,5 @@ module "this" {
   public_access_prevention = try(var.bucket_config.public_access_prevention, "enforced")
   retention_policy         = try(var.bucket_config.retention_policy, {})
   storage_class            = try(var.bucket_config.storage_class, "STANDARD")
-  versioning               = try(var.bucket_config.versioning, false) ? { local.bucket_name = true } : {}
+  versioning               = try(var.bucket_config.versioning, false) ? { "${local.bucket_name}" = true } : {}
 }
