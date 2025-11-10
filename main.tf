@@ -30,7 +30,7 @@ module "this" {
   admins                   = try(var.bucket_config.admins, [])
   viewers                  = try(var.bucket_config.bucket_viewers, [])
   location                 = try(var.bucket_config.location, "US")
-  labels                   = merge(try(var.bucket_config.labels, {}), {for k, v in local.all_tags: lower(k) => replace(lower(v), " /", "_ ")})
+  labels                   = merge(try(var.bucket_config.labels, {}), {for k, v in local.all_tags: lower(k) => replace(lower(v), "/[ \/]/", "_ ")})
   public_access_prevention = try(var.bucket_config.public_access_prevention, "enforced")
   retention_policy         = try(var.bucket_config.retention_policy, {})
   storage_class            = try(var.bucket_config.storage_class, "STANDARD")
