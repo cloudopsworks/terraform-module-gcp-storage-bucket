@@ -27,7 +27,7 @@ module "this" {
   names                    = [local.bucket_suffix]
   prefix                   = var.name_prefix
   project_id               = try(var.bucket_config.project_id, data.google_project.current.project_id)
-  bucket_lifecycle_rules   = length(try(var.bucket_config.lifecycle_rule, [])) > 0 ? { "${bucket_suffix}" = var.bucket_config.lifecycle_rule } : {}
+  bucket_lifecycle_rules   = length(try(var.bucket_config.lifecycle_rule, [])) > 0 ? { "${local.bucket_suffix}" = var.bucket_config.lifecycle_rule } : {}
   admins                   = try(var.bucket_config.admins, [])
   viewers                  = try(var.bucket_config.bucket_viewers, [])
   location                 = try(var.bucket_config.location, "US")
@@ -36,5 +36,5 @@ module "this" {
   retention_policy         = try(var.bucket_config.retention_policy, {})
   storage_class            = try(var.bucket_config.storage_class, "STANDARD")
   randomize_suffix         = true
-  versioning               = try(var.bucket_config.versioning, false) ? { "${bucket_suffix}" = true } : {}
+  versioning               = try(var.bucket_config.versioning, false) ? { "${local.bucket_suffix}" = true } : {}
 }
