@@ -6,3 +6,15 @@
 #       WebSite: https://cloudops.works
 #     Distributed Under Apache v2.0 License
 #
+
+output "bucket_name" {
+  value = module.this.name
+}
+
+output "bucket_url" {
+  value = module.this.url
+}
+
+output "apphub_service_uri" {
+  value = module.this.apphub_service_uri
+}

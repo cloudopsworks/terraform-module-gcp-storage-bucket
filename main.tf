@@ -7,8 +7,8 @@
 #     Distributed Under Apache v2.0 License
 #
 locals {
-  clean_name  = var.name != "" ? var.name : (var.short_system_name == true ? "${var.name_prefix}-${local.system_name_short}" : "${var.name_prefix}-${local.system_name}")
-  bucket_name = var.random_bucket_suffix == false ? local.clean_name : "${local.clean_name}-${random_string.random[0].result}"
+  clean_name    = var.name != "" ? var.name : (var.short_system_name == true ? "${var.name_prefix}-${local.system_name_short}" : "${var.name_prefix}-${local.system_name}")
+  bucket_name   = var.random_bucket_suffix == false ? local.clean_name : "${local.clean_name}-${random_string.random[0].result}"
   bucket_suffix = var.short_system_name == true ? local.system_name_short : local.system_name
 }
 
