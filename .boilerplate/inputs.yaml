@@ -1,1 +1,40 @@
 # Module configuration
+
+org:
+  organization_name: "cloudopsworks"     # (Required) Organization or company name used by the shared tagging module.
+  organization_unit: "platform"          # (Required) Business or platform unit used in naming.
+  environment_type: "production"         # (Required) Environment class, for example production, staging, or development.
+  environment_name: "prod"               # (Required) Environment instance name used in naming and tagging.
+
+name: ""                                 # (Optional) Reserved explicit name input. The current implementation derives names from prefix and shared metadata.
+name_prefix: "app-artifacts"             # (Optional) Prefix used when composing the bucket name.
+random_bucket_suffix: true                # (Optional) Reserved suffix toggle. The current implementation still enables the upstream random suffix. Default: true.
+short_system_name: false                  # (Optional) Uses shortened environment naming when true. Default: false.
+is_hub: false                             # (Optional) Preserves shared hub/spoke metadata used across Cloud Ops Works modules. Default: false.
+spoke_def: "001"                         # (Optional) Three-digit spoke identifier used in shared naming metadata. Default: "001".
+
+bucket_config:
+  project_id: "my-gcp-project"           # (Optional) Target Google Cloud project. Defaults to the current provider project.
+  location: "US"                         # (Optional) Bucket location/region. Default: "US".
+  storage_class: "STANDARD"              # (Optional) Storage class. Default: "STANDARD".
+  public_access_prevention: "enforced"   # (Optional) Public access prevention mode. Default: "enforced".
+  versioning: true                        # (Optional) Enables object versioning. Default: false.
+  admins:                                 # (Optional) Principals granted admin access.
+    - "group:gcs-admins@example.com"
+  bucket_viewers:                         # (Optional) Principals granted read access.
+    - "group:gcs-viewers@example.com"
+  labels:                                 # (Optional) Extra bucket labels merged with module-generated tags.
+    application: "artifacts"
+    owner: "platform"
+  lifecycle_rule:                         # (Optional) Lifecycle rule objects passed through to the upstream storage module.
+    - action:
+        type: "Delete"
+      condition:
+        age: 30
+  retention_policy:                       # (Optional) Retention policy passed through to the upstream storage module.
+    retention_period: 86400
+  # Additional keys supported by the upstream cloud-storage module can be placed here when they map to the passthrough attributes used by this wrapper.
+
+extra_tags:                               # (Optional) Extra labels/tags merged into the generated standard tag set. Default: {}.
+  cost_center: "platform"
+  data_classification: "internal"

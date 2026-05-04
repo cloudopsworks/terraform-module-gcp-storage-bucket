@@ -7,19 +7,19 @@
 #     Distributed Under Apache v2.0 License
 #
 variable "name" {
-  description = "The name of the S3 bucket"
+  description = "Reserved explicit name input; the current module naming path derives names from prefix and shared environment metadata"
   type        = string
   default     = ""
 }
 
 variable "name_prefix" {
-  description = "Creates a unique bucket name beginning with the specified prefix. Conflicts with name"
+  description = "Prefix used to compose the Google Cloud Storage bucket name"
   type        = string
   default     = ""
 }
 
 variable "random_bucket_suffix" {
-  description = "Creates a unique bucket name with a random 8 character string appended to the end. Defaults to true, for clean names set to false"
+  description = "Reserved suffix toggle; the current implementation still enables the upstream random bucket suffix"
   type        = bool
   default     = true
 }
@@ -31,7 +31,7 @@ variable "short_system_name" {
 }
 
 variable "bucket_config" {
-  description = "The configuration for the S3 bucket"
+  description = "Configuration values passed through to the underlying Google Cloud Storage bucket module"
   type        = any
   default     = {}
 }
