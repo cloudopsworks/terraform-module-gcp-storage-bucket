@@ -10,10 +10,12 @@
 
 [![cloudopsworks][logo]](https://cloudopsworks.co/)
 
-# Terraform Transit Gateway Module
+# Terraform GCP Storage Bucket Module
+
+ [![Latest Release](https://img.shields.io/github/release/cloudopsworks/terraform-module-gcp-storage-bucket.svg?style=for-the-badge)](https://github.com/cloudopsworks/terraform-module-gcp-storage-bucket/releases/latest) [![Last Updated](https://img.shields.io/github/last-commit/cloudopsworks/terraform-module-gcp-storage-bucket.svg?style=for-the-badge)](https://github.com/cloudopsworks/terraform-module-gcp-storage-bucket/commits)
 
 
-VPC Module for setting up transit gateway with ResourceAccessMananger support.
+Wrapper module around `terraform-google-modules/cloud-storage/google` for creating opinionated Google Cloud Storage buckets with Cloud Ops Works naming and tagging conventions.
 
 
 ---
@@ -41,10 +43,121 @@ We have [*lots of terraform modules*][terraform_modules] that are Open Source an
 
 
 
+## Introduction
+
+This module provisions Google Cloud Storage buckets for Cloud Ops Works environments and layers in the repository's shared naming, tagging, and environment metadata conventions.
+
+It is designed for Terragrunt-driven stacks where operators scaffold a deployment, fill in an `inputs.yaml`, and let the generated `terragrunt.hcl` pass the structured inputs into the module.
+
+## Usage
 
 
+**IMPORTANT:** The `master` branch is used in `source` just as an example. In your code, do not pin to `master` because there may be breaking changes between releases.
+Instead pin to the release tag (e.g. `?ref=vX.Y.Z`) of one of our [latest releases](https://github.com/cloudopsworks/terraform-module-gcp-storage-bucket/releases).
 
 
+Start by scaffolding a Terragrunt unit for the module:
+
+```bash
+mkdir -p live/prod/storage/app-artifacts
+cd live/prod/storage/app-artifacts
+
+terragrunt scaffold --source "git::https://github.com/cloudopsworks/terraform-module-gcp-storage-bucket.git//?ref=v1.1.0"
+```
+
+Populate the generated `inputs.yaml` with the module variables. The example below mirrors `.boilerplate/inputs.yaml` and keeps the `(Required)` / `(Optional)` guidance inline:
+
+```yaml
+org:
+  organization_name: "cloudopsworks"     # (Required) Organization or company name used by the shared tagging module.
+  organization_unit: "platform"          # (Required) Business or platform unit used in naming.
+  environment_type: "production"         # (Required) Environment class, for example production, staging, or development.
+  environment_name: "prod"               # (Required) Environment instance name used in naming and tagging.
+
+name: ""                                 # (Optional) Reserved explicit name input. The current implementation derives names from prefix and shared metadata.
+name_prefix: "app-artifacts"             # (Optional) Prefix used when composing the bucket name.
+random_bucket_suffix: true                # (Optional) Reserved suffix toggle. The current implementation still enables the upstream random suffix. Default: true.
+short_system_name: false                  # (Optional) Uses shortened environment naming when true. Default: false.
+is_hub: false                             # (Optional) Preserves shared hub/spoke metadata used across Cloud Ops Works modules. Default: false.
+spoke_def: "001"                         # (Optional) Three-digit spoke identifier used in shared naming metadata. Default: "001".
+
+bucket_config:
+  project_id: "my-gcp-project"           # (Optional) Target Google Cloud project. Defaults to the current provider project.
+  location: "US"                         # (Optional) Bucket location/region. Default: "US".
+  storage_class: "STANDARD"              # (Optional) Storage class. Default: "STANDARD".
+  public_access_prevention: "enforced"   # (Optional) Public access prevention mode. Default: "enforced".
+  versioning: true                        # (Optional) Enables object versioning. Default: false.
+  admins:                                 # (Optional) Principals granted admin access.
+    - "group:gcs-admins@example.com"
+  bucket_viewers:                         # (Optional) Principals granted read access.
+    - "group:gcs-viewers@example.com"
+  labels:                                 # (Optional) Extra bucket labels merged with module-generated tags.
+    application: "artifacts"
+    owner: "platform"
+  lifecycle_rule:                         # (Optional) Lifecycle rule objects passed through to the upstream storage module.
+    - action:
+        type: "Delete"
+      condition:
+        age: 30
+  retention_policy:                       # (Optional) Retention policy passed through to the upstream storage module.
+    retention_period: 86400
+  # Additional keys supported by the upstream cloud-storage module can be placed here when they map to the passthrough attributes used by this wrapper.
+
+extra_tags:                               # (Optional) Extra labels/tags merged into the generated standard tag set. Default: {}.
+  cost_center: "platform"
+  data_classification: "internal"
+```
+
+The scaffolded `terragrunt.hcl` should follow the standard pattern of reading `inputs.yaml` into `local.local_vars` and passing the values to the module:
+
+```hcl
+locals {
+  local_vars = yamldecode(file("${get_terragrunt_dir()}/inputs.yaml"))
+}
+
+terraform {
+  source = "git::https://github.com/cloudopsworks/terraform-module-gcp-storage-bucket.git//?ref=v1.1.0"
+}
+
+inputs = {
+  org                  = local.local_vars.org
+  name                 = try(local.local_vars.name, "")
+  name_prefix          = try(local.local_vars.name_prefix, "")
+  random_bucket_suffix = try(local.local_vars.random_bucket_suffix, true)
+  short_system_name    = try(local.local_vars.short_system_name, false)
+  is_hub               = try(local.local_vars.is_hub, false)
+  spoke_def            = try(local.local_vars.spoke_def, "001")
+  bucket_config        = try(local.local_vars.bucket_config, {})
+  extra_tags           = try(local.local_vars.extra_tags, {})
+}
+```
+
+## Quick Start
+
+1. Scaffold a Terragrunt unit from this module.
+2. Copy the sample structure from `.boilerplate/inputs.yaml` into your deployment `inputs.yaml`.
+3. Set `org` and `bucket_config.project_id` for the target environment.
+4. Run `terragrunt init` and `terragrunt plan` from the scaffolded unit.
+
+
+## Examples
+
+Common use cases include:
+
+- application artifact buckets with lifecycle cleanup rules
+- environment-specific buckets with standardized labels
+- private buckets with versioning and retention enabled
+
+A minimal production-oriented `bucket_config` looks like this:
+
+```yaml
+bucket_config:
+  project_id: "my-gcp-project"
+  location: "US"
+  storage_class: "STANDARD"
+  public_access_prevention: "enforced"
+  versioning: true
+```
 
 
 
@@ -72,8 +185,8 @@ Available targets:
 
 | Name | Version |
 |------|---------|
-| <a name="provider_google"></a> [google](#provider\_google) | ~> 7.0 |
-| <a name="provider_random"></a> [random](#provider\_random) | n/a |
+| <a name="provider_google"></a> [google](#provider\_google) | 7.10.0 |
+| <a name="provider_random"></a> [random](#provider\_random) | 3.7.2 |
 
 ## Modules
 
@@ -93,13 +206,13 @@ Available targets:
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
-| <a name="input_bucket_config"></a> [bucket\_config](#input\_bucket\_config) | The configuration for the S3 bucket | `any` | `{}` | no |
+| <a name="input_bucket_config"></a> [bucket\_config](#input\_bucket\_config) | Configuration values passed through to the underlying Google Cloud Storage bucket module | `any` | `{}` | no |
 | <a name="input_extra_tags"></a> [extra\_tags](#input\_extra\_tags) | Extra tags to add to the resources | `map(string)` | `{}` | no |
 | <a name="input_is_hub"></a> [is\_hub](#input\_is\_hub) | Is this a hub or spoke configuration? | `bool` | `false` | no |
-| <a name="input_name"></a> [name](#input\_name) | The name of the S3 bucket | `string` | `""` | no |
-| <a name="input_name_prefix"></a> [name\_prefix](#input\_name\_prefix) | Creates a unique bucket name beginning with the specified prefix. Conflicts with name | `string` | `""` | no |
+| <a name="input_name"></a> [name](#input\_name) | Reserved explicit name input; the current module naming path derives names from prefix and shared environment metadata | `string` | `""` | no |
+| <a name="input_name_prefix"></a> [name\_prefix](#input\_name\_prefix) | Prefix used to compose the Google Cloud Storage bucket name | `string` | `""` | no |
 | <a name="input_org"></a> [org](#input\_org) | Organization details | <pre>object({<br/>    organization_name = string<br/>    organization_unit = string<br/>    environment_type  = string<br/>    environment_name  = string<br/>  })</pre> | n/a | yes |
-| <a name="input_random_bucket_suffix"></a> [random\_bucket\_suffix](#input\_random\_bucket\_suffix) | Creates a unique bucket name with a random 8 character string appended to the end. Defaults to true, for clean names set to false | `bool` | `true` | no |
+| <a name="input_random_bucket_suffix"></a> [random\_bucket\_suffix](#input\_random\_bucket\_suffix) | Reserved suffix toggle; the current implementation still enables the upstream random bucket suffix | `bool` | `true` | no |
 | <a name="input_short_system_name"></a> [short\_system\_name](#input\_short\_system\_name) | Force the use of the short system name local variable, defaults to false. | `bool` | `false` | no |
 | <a name="input_spoke_def"></a> [spoke\_def](#input\_spoke\_def) | Spoke ID Number, must be a 3 digit number | `string` | `"001"` | no |
 
@@ -107,9 +220,9 @@ Available targets:
 
 | Name | Description |
 |------|-------------|
-| <a name="output_apphub_service_uri"></a> [apphub\_service\_uri](#output\_apphub\_service\_uri) | n/a |
-| <a name="output_bucket_name"></a> [bucket\_name](#output\_bucket\_name) | n/a |
-| <a name="output_bucket_url"></a> [bucket\_url](#output\_bucket\_url) | n/a |
+| <a name="output_apphub_service_uri"></a> [apphub\_service\_uri](#output\_apphub\_service\_uri) | AppHub service URI exported by the underlying storage module, when available |
+| <a name="output_bucket_name"></a> [bucket\_name](#output\_bucket\_name) | Resolved Google Cloud Storage bucket name created by the module |
+| <a name="output_bucket_url"></a> [bucket\_url](#output\_bucket\_url) | URL of the Google Cloud Storage bucket |
 
 
 
@@ -117,7 +230,7 @@ Available targets:
 
 **Got a question?** We got answers. 
 
-File a GitHub [issue](https://github.com/cloudopsworks/terraform-module-aws-vpc-setup/issues), send us an [email][email] or join our [Slack Community][slack].
+File a GitHub [issue](https://github.com/cloudopsworks/terraform-module-gcp-storage-bucket/issues), send us an [email][email] or join our [Slack Community][slack].
 
 
 ## DevOps Tools
@@ -133,7 +246,7 @@ File a GitHub [issue](https://github.com/cloudopsworks/terraform-module-aws-vpc-
 
 ### Bug Reports & Feature Requests
 
-Please use the [issue tracker](https://github.com/cloudopsworks/terraform-module-aws-vpc-setup/issues) to report any bugs or file feature requests.
+Please use the [issue tracker](https://github.com/cloudopsworks/terraform-module-gcp-storage-bucket/issues) to report any bugs or file feature requests.
 
 ### Developing
 
@@ -200,30 +313,30 @@ This project is maintained by [Cloud Ops Works LLC][website].
 [![Beacon][beacon]][website]
 
   [logo]: https://cloudopsworks.co/images/main-logo.png
-  [docs]: https://cloudopsworks.co/resources?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-vpc-setup&utm_content=docs
-  [website]: https://cloudopsworks.co?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-vpc-setup&utm_content=website
-  [github]: https://cloudopsworks.co/github?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-vpc-setup&utm_content=github
-  [jobs]: https://cloudopsworks.co/jobs?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-vpc-setup&utm_content=jobs
-  [hire]: https://cloudopsworks.co/hire?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-vpc-setup&utm_content=hire
-  [slack]: https://cloudopsworks.co/slack?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-vpc-setup&utm_content=slack
-  [linkedin]: https://cloudopsworks.co/linkedin?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-vpc-setup&utm_content=linkedin
-  [x]: https://cloudopsworks.co/x?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-vpc-setup&utm_content=x
-  [testimonial]: https://cloudopsworks.co/case-studies?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-vpc-setup&utm_content=testimonial
-  [office_hours]: https://cloudopsworks.co/office-hours?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-vpc-setup&utm_content=office_hours
-  [newsletter]: https://cloudopsworks.co/resources?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-vpc-setup&utm_content=newsletter
-  [email]: https://cloudopsworks.co/contact?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-vpc-setup&utm_content=email
-  [commercial_support]: https://cloudopsworks.co/services?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-vpc-setup&utm_content=commercial_support
-  [we_love_open_source]: https://cloudopsworks.co/open-source?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-vpc-setup&utm_content=we_love_open_source
-  [terraform_modules]: https://cloudopsworks.co/open-source?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-vpc-setup&utm_content=terraform_modules
+  [docs]: https://cloudopsworks.co/resources?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-storage-bucket&utm_content=docs
+  [website]: https://cloudopsworks.co?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-storage-bucket&utm_content=website
+  [github]: https://cloudopsworks.co/github?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-storage-bucket&utm_content=github
+  [jobs]: https://cloudopsworks.co/jobs?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-storage-bucket&utm_content=jobs
+  [hire]: https://cloudopsworks.co/hire?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-storage-bucket&utm_content=hire
+  [slack]: https://cloudopsworks.co/slack?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-storage-bucket&utm_content=slack
+  [linkedin]: https://cloudopsworks.co/linkedin?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-storage-bucket&utm_content=linkedin
+  [x]: https://cloudopsworks.co/x?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-storage-bucket&utm_content=x
+  [testimonial]: https://cloudopsworks.co/case-studies?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-storage-bucket&utm_content=testimonial
+  [office_hours]: https://cloudopsworks.co/office-hours?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-storage-bucket&utm_content=office_hours
+  [newsletter]: https://cloudopsworks.co/resources?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-storage-bucket&utm_content=newsletter
+  [email]: https://cloudopsworks.co/contact?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-storage-bucket&utm_content=email
+  [commercial_support]: https://cloudopsworks.co/services?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-storage-bucket&utm_content=commercial_support
+  [we_love_open_source]: https://cloudopsworks.co/open-source?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-storage-bucket&utm_content=we_love_open_source
+  [terraform_modules]: https://cloudopsworks.co/open-source?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-storage-bucket&utm_content=terraform_modules
   [readme_header_img]: https://cloudopsworks.co/images/readme-header.png
-  [readme_header_link]: https://cloudopsworks.co/readme/header/link?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-vpc-setup&utm_content=readme_header_link
+  [readme_header_link]: https://cloudopsworks.co/readme/header/link?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-storage-bucket&utm_content=readme_header_link
   [readme_footer_img]: https://cloudopsworks.co/images/main-logo-footer.png
-  [readme_footer_link]: https://cloudopsworks.co/readme/footer/link?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-vpc-setup&utm_content=readme_footer_link
+  [readme_footer_link]: https://cloudopsworks.co/readme/footer/link?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-storage-bucket&utm_content=readme_footer_link
   [readme_commercial_support_img]: https://cloudopsworks.co/readme/commercial-support/img
-  [readme_commercial_support_link]: https://cloudopsworks.co/readme/commercial-support/link?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-aws-vpc-setup&utm_content=readme_commercial_support_link
-  [share_twitter]: https://x.com/intent/tweet/?text=Terraform+Transit+Gateway+Module&url=https://github.com/cloudopsworks/terraform-module-aws-vpc-setup
-  [share_linkedin]: https://www.linkedin.com/shareArticle?mini=true&title=Terraform+Transit+Gateway+Module&url=https://github.com/cloudopsworks/terraform-module-aws-vpc-setup
-  [share_reddit]: https://reddit.com/submit/?url=https://github.com/cloudopsworks/terraform-module-aws-vpc-setup
-  [share_facebook]: https://facebook.com/sharer/sharer.php?u=https://github.com/cloudopsworks/terraform-module-aws-vpc-setup
-  [share_email]: mailto:?subject=Terraform+Transit+Gateway+Module&body=https://github.com/cloudopsworks/terraform-module-aws-vpc-setup
-  [beacon]: https://ga-beacon.cloudospworks.co/G-QMZVYYN2VN/cloudopsworks/terraform-module-aws-vpc-setup?pixel&cs=github&cm=readme&an=terraform-module-aws-vpc-setup
+  [readme_commercial_support_link]: https://cloudopsworks.co/readme/commercial-support/link?utm_source=github&utm_medium=readme&utm_campaign=cloudopsworks/terraform-module-gcp-storage-bucket&utm_content=readme_commercial_support_link
+  [share_twitter]: https://x.com/intent/tweet/?text=Terraform+GCP+Storage+Bucket+Module&url=https://github.com/cloudopsworks/terraform-module-gcp-storage-bucket
+  [share_linkedin]: https://www.linkedin.com/shareArticle?mini=true&title=Terraform+GCP+Storage+Bucket+Module&url=https://github.com/cloudopsworks/terraform-module-gcp-storage-bucket
+  [share_reddit]: https://reddit.com/submit/?url=https://github.com/cloudopsworks/terraform-module-gcp-storage-bucket
+  [share_facebook]: https://facebook.com/sharer/sharer.php?u=https://github.com/cloudopsworks/terraform-module-gcp-storage-bucket
+  [share_email]: mailto:?subject=Terraform+GCP+Storage+Bucket+Module&body=https://github.com/cloudopsworks/terraform-module-gcp-storage-bucket
+  [beacon]: https://ga-beacon.cloudospworks.co/G-QMZVYYN2VN/cloudopsworks/terraform-module-gcp-storage-bucket?pixel&cs=github&cm=readme&an=terraform-module-gcp-storage-bucket

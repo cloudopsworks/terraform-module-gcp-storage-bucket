@@ -8,13 +8,16 @@
 #
 
 output "bucket_name" {
-  value = module.this.name
+  description = "Resolved Google Cloud Storage bucket name created by the module"
+  value       = module.this.name
 }
 
 output "bucket_url" {
-  value = module.this.url
+  description = "URL of the Google Cloud Storage bucket"
+  value       = module.this.url
 }
 
 output "apphub_service_uri" {
-  value = module.this.apphub_service_uri
+  description = "AppHub service URI exported by the underlying storage module, when available"
+  value       = module.this.apphub_service_uri
 }

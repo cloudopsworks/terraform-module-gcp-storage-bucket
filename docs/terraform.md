@@ -10,8 +10,8 @@
 
 | Name | Version |
 |------|---------|
-| <a name="provider_google"></a> [google](#provider\_google) | ~> 7.0 |
-| <a name="provider_random"></a> [random](#provider\_random) | n/a |
+| <a name="provider_google"></a> [google](#provider\_google) | 7.10.0 |
+| <a name="provider_random"></a> [random](#provider\_random) | 3.7.2 |
 
 ## Modules
 
@@ -31,13 +31,13 @@
 
 | Name | Description | Type | Default | Required |
 |------|-------------|------|---------|:--------:|
-| <a name="input_bucket_config"></a> [bucket\_config](#input\_bucket\_config) | The configuration for the S3 bucket | `any` | `{}` | no |
+| <a name="input_bucket_config"></a> [bucket\_config](#input\_bucket\_config) | Configuration values passed through to the underlying Google Cloud Storage bucket module | `any` | `{}` | no |
 | <a name="input_extra_tags"></a> [extra\_tags](#input\_extra\_tags) | Extra tags to add to the resources | `map(string)` | `{}` | no |
 | <a name="input_is_hub"></a> [is\_hub](#input\_is\_hub) | Is this a hub or spoke configuration? | `bool` | `false` | no |
-| <a name="input_name"></a> [name](#input\_name) | The name of the S3 bucket | `string` | `""` | no |
-| <a name="input_name_prefix"></a> [name\_prefix](#input\_name\_prefix) | Creates a unique bucket name beginning with the specified prefix. Conflicts with name | `string` | `""` | no |
+| <a name="input_name"></a> [name](#input\_name) | Reserved explicit name input; the current module naming path derives names from prefix and shared environment metadata | `string` | `""` | no |
+| <a name="input_name_prefix"></a> [name\_prefix](#input\_name\_prefix) | Prefix used to compose the Google Cloud Storage bucket name | `string` | `""` | no |
 | <a name="input_org"></a> [org](#input\_org) | Organization details | <pre>object({<br/>    organization_name = string<br/>    organization_unit = string<br/>    environment_type  = string<br/>    environment_name  = string<br/>  })</pre> | n/a | yes |
-| <a name="input_random_bucket_suffix"></a> [random\_bucket\_suffix](#input\_random\_bucket\_suffix) | Creates a unique bucket name with a random 8 character string appended to the end. Defaults to true, for clean names set to false | `bool` | `true` | no |
+| <a name="input_random_bucket_suffix"></a> [random\_bucket\_suffix](#input\_random\_bucket\_suffix) | Reserved suffix toggle; the current implementation still enables the upstream random bucket suffix | `bool` | `true` | no |
 | <a name="input_short_system_name"></a> [short\_system\_name](#input\_short\_system\_name) | Force the use of the short system name local variable, defaults to false. | `bool` | `false` | no |
 | <a name="input_spoke_def"></a> [spoke\_def](#input\_spoke\_def) | Spoke ID Number, must be a 3 digit number | `string` | `"001"` | no |
 
@@ -45,6 +45,6 @@
 
 | Name | Description |
 |------|-------------|
-| <a name="output_apphub_service_uri"></a> [apphub\_service\_uri](#output\_apphub\_service\_uri) | n/a |
-| <a name="output_bucket_name"></a> [bucket\_name](#output\_bucket\_name) | n/a |
-| <a name="output_bucket_url"></a> [bucket\_url](#output\_bucket\_url) | n/a |
+| <a name="output_apphub_service_uri"></a> [apphub\_service\_uri](#output\_apphub\_service\_uri) | AppHub service URI exported by the underlying storage module, when available |
+| <a name="output_bucket_name"></a> [bucket\_name](#output\_bucket\_name) | Resolved Google Cloud Storage bucket name created by the module |
+| <a name="output_bucket_url"></a> [bucket\_url](#output\_bucket\_url) | URL of the Google Cloud Storage bucket |
